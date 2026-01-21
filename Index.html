@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>National Brokers - Diagnóstico y Mapa de Calor</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideInRight { from { transform: translateX(100%); } to { transform: translateX(0); } }
+        @keyframes zoomIn { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        .animate-in { animation: fadeIn 0.5s ease-out; }
+        .fade-in { animation: fadeIn 0.7s ease-out; }
+        .zoom-in { animation: zoomIn 0.5s ease-out; }
+        .slide-in-from-right { animation: slideInRight 0.3s ease-out; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState } = React;
+        
+        // Iconos simplificados como componentes SVG
+        const AlertCircle = ({ className }) => (
+            <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <circle cx="12" cy="12" r="10" strokeWidth="2"/>
+                <line x1="12" y1="8" x2="12" y2="12" strokeWidth="2"/>
+                <line x1="12" y1="16" x2="12.01" y2="16" strokeWidth="2"/>
+            </svg>
+        );
+
+        const AlertTriangle = ({ className }) => (
+            <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+            </svg>
+        );
+
+        const ChevronRight = ({ className }) => (
+            <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"/>
+            </svg>
+        );
+
+        const ArrowRight = ({ className }) => (
+            <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
+            </svg>
+        );
+
+        const X = ({ className }) => (
+            <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+        );
+
+        const Users = ({ className }) => (
+            <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
+            </svg>
+        );
+
+        const ShieldAlert = ({ className }) => (
+            <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20.618 5.984A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016zM12 9v2m0 4h.01"/>
+            </svg>
+        );
+
+        const Database = ({ className }) => (
+            <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"/>
+            </svg>
+        );
+
+        const LayoutGrid = ({ className }) => (
+            <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <rect x="3" y="3" width="7" height="7" strokeWidth="2"/>
+                <rect x="14" y="3" width="7" height="7" strokeWidth="2"/>
+                <rect x="14" y="14" width="7" height="7" strokeWidth="2"/>
+                <rect x="3" y="14" width="7" height="7" strokeWidth="2"/>
+            </svg>
+        );
+
+        const Activity = ({ className }) => (
+            <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+            </svg>
+        );
+
+        const Info = ({ className }) => (
+            <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <circle cx="12" cy="12" r="10" strokeWidth="2"/>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 16v-4m0-4h.01"/>
+            </svg>
+        );
+
+        const BarChart3 = ({ className }) => (
+            <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18 20V10m-6 10V4m-6 16v-6"/>
+            </svg>
+        );
+
+        const Search = ({ className }) => (
+            <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <circle cx="11" cy="11" r="8" strokeWidth="2"/>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m21 21-4.35-4.35"/>
+            </svg>
+        );
+
+        // Datos del informe
+        const data = [
+          {
+            id: 1,
+            area: "Operaciones & Técnica",
+            procesos: ["Gestor de refacturación", "Técnica (Suscripción ART)", "Acceso a Solicitudes Pendientes"],
+            estado: "CRÍTICO",
+            diagnostico: [
+              { titulo: "ART", desc: "Técnicos actúan como data entry en 15 portales (freno al crecimiento)." },
+              { titulo: "Click", desc: "Gestión reactiva ('tarifazo'). El cliente avisa del aumento antes que el sistema." },
+              { titulo: "Core", desc: "Doble carga manual (Ticket -> Solicitud)." }
+            ]
+          },
+          {
+            id: 2,
+            area: "Tesorería & Contabilidad",
+            procesos: ["Tesorería", "Contabilidad"],
+            estado: "CRÍTICO",
+            diagnostico: [
+              { titulo: "Validación Fiscal", desc: "Aunque GECOM ordena lo contable, la validación fiscal es manual. Se validan 600 facturas/mes a ojo, exponiendo a la empresa a fraude o errores fiscales." }
+            ]
+          },
+          {
+            id: 3,
+            area: "Cobranzas",
+            procesos: ["Cobranzas"],
+            estado: "CRÍTICO",
+            diagnostico: [
+              { titulo: "Conciliación", desc: "El cruce entre liquidaciones (40 portales) y pagos es manual y visual. Se opera con 'vista cansada', generando riesgo directo de pérdida de dinero (P&L)." }
+            ]
+          },
+          {
+            id: 4,
+            area: "Controlling & Datos",
+            procesos: ["Controlling", "Análisis cumplimiento presupuestario"],
+            estado: "FRICCIÓN",
+            diagnostico: [
+              { titulo: "Análisis", desc: "Imposibilidad de análisis real por falta de tiempo (descarga manual de 40 portales). Riesgo alto por datos heterogéneos y falta de estándar unificado." }
+            ]
+          },
+          {
+            id: 5,
+            area: "Atención al Cliente",
+            procesos: ["Atención al cliente", "Portal de Autogestión", "Mail Bots / Voice Bot"],
+            estado: "FRICCIÓN",
+            diagnostico: [
+              { titulo: "Desconexión", desc: "Desconexión entre el ticket (historia) y la solicitud (core). Falta de datos estructurados (motivos de llamada) impide la automatización inmediata con Bots." }
+            ]
+          },
+          {
+            id: 6,
+            area: "Canal PAS",
+            procesos: ["Plataforma tecnológica PAS"],
+            estado: "FRICCIÓN",
+            diagnostico: [
+              { titulo: "Gestión Informal", desc: "300 productores gestionados vía WhatsApp y Excel. Riesgo de pérdida de negocios por olvido y liquidación de comisiones de referidos basada en memoria o chats dispersos." }
+            ]
+          }
+        ];
+
+        const logoUrl = "https://www.nationalbrokers.com.ar/_nuxt/img/logo.13a7015.png";
+        const bombieriLogoUrl = "https://framerusercontent.com/images/8smqX2n6Gb2EvBQyyiOEyeyhzF4.png?scale-down-to=512&width=1480&height=221";
+
+        // Componente: Pantalla de Introducción
+        const IntroScreen = ({ onStart }) => (
+          <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4 font-sans">
+            <div className="max-w-4xl w-full bg-white rounded-2xl shadow-xl overflow-hidden flex flex-col md:flex-row animate-in fade-in zoom-in duration-500">
+              
+              <div className="md:w-2/5 bg-[#002B5C] p-8 text-white flex flex-col justify-between relative overflow-hidden">
+                <div className="absolute top-[-50px] left-[-50px] w-40 h-40 bg-[#00A4E4] rounded-full opacity-20 blur-2xl"></div>
+                <div className="absolute bottom-[-20px] right-[-20px] w-60 h-60 bg-[#00A4E4] rounded-full opacity-10 blur-3xl"></div>
+                
+                <div className="z-10">
+                   <img 
+                    src={logoUrl} 
+                    alt="National Brokers Logo" 
+                    className="h-12 mb-8 bg-white/90 p-2 rounded-lg object-contain w-auto shadow-md" 
+                  />
+                  <h1 className="text-3xl font-bold mb-4 leading-tight">Diagnóstico y Mapa de Transformación</h1>
+                  <p className="text-blue-100 text-sm leading-relaxed mb-6">
+                    Informe Estratégico - Fase 2
+                  </p>
+                </div>
+
+                <div className="z-10 border-t border-blue-800 pt-6">
+                  <p className="text-xs text-blue-300 uppercase tracking-widest mb-2">Preparado por</p>
+                  <div className="bg-white/90 p-2 rounded-lg inline-block shadow-sm">
+                    <img 
+                      src={bombieriLogoUrl} 
+                      alt="Bombieri" 
+                      className="h-6 w-auto object-contain"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="md:w-3/5 p-8 md:p-10 flex flex-col justify-center">
+                <h2 className="text-xl font-bold text-gray-800 mb-6">Resumen Ejecutivo</h2>
+                
+                <div className="space-y-6 mb-8">
+                  <div className="flex gap-4 items-start">
+                    <div className="bg-blue-50 p-2 rounded-lg text-[#002B5C]">
+                      <Users className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-gray-900 text-sm">El Problema: "API Humana"</h3>
+                      <p className="text-sm text-gray-600 mt-1">
+                        National Brokers opera conectando sistemas manualmente. Áreas críticas dedican el 50% de su capacidad a ser "Data Entry" en múltiples portales.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-4 items-start">
+                    <div className="bg-red-50 p-2 rounded-lg text-red-600">
+                      <ShieldAlert className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-gray-900 text-sm">Riesgo Financiero Crítico</h3>
+                      <p className="text-sm text-gray-600 mt-1">
+                        Tesorería y Cobranzas operan "a ciegas", validando facturas y liquidaciones visualmente, exponiendo a la empresa a fraudes y errores.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-4 items-start">
+                    <div className="bg-yellow-50 p-2 rounded-lg text-yellow-600">
+                      <Database className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-gray-900 text-sm">Paradoja Tecnológica</h3>
+                      <p className="text-sm text-gray-600 mt-1">
+                        Existe tecnología (Core, Google Workspace) pero la cultura operativa prefiere el control manual (Excel, WhatsApp), creando silos de datos.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <button 
+                  onClick={onStart}
+                  className="group w-full bg-[#002B5C] hover:bg-[#001e40] text-white font-bold py-4 px-6 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg hover:shadow-xl hover:translate-y-[-2px]"
+                >
+                  Acceder al Mapa de Calor
+                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+
+        const HeatmapCard = ({ item, onClick, isActive }) => {
+          const isCritical = item.estado === "CRÍTICO";
+          const icon = isCritical ? <AlertCircle className="w-5 h-5 text-red-600" /> : <AlertTriangle className="w-5 h-5 text-yellow-600" />;
+
+          return (
+            <div 
+              onClick={() => onClick(item)}
+              className={`
+                cursor-pointer rounded-xl p-5 border-l-4 transition-all duration-300 shadow-sm hover:shadow-md
+                ${isActive ? 'ring-2 ring-[#00A4E4] scale-[1.02]' : 'hover:translate-y-[-2px]'}
+                ${isCritical ? 'border-l-red-500 bg-white' : 'border-l-yellow-500 bg-white'}
+              `}
+            >
+              <div className="flex justify-between items-start mb-3">
+                <span className={`text-xs font-bold px-2 py-1 rounded-full flex items-center gap-1 ${isCritical ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                  {icon}
+                  {item.estado}
+                </span>
+              </div>
+              
+              <h3 className="text-lg font-bold text-gray-800 mb-2 leading-tight">{item.area}</h3>
+              
+              <div className="text-sm text-gray-500 mb-4">
+                <span className="font-semibold text-gray-700">{item.procesos.length}</span> Procesos afectados
+              </div>
+
+              <div className="flex flex-wrap gap-1">
+                {item.procesos.slice(0, 2).map((proc, idx) => (
+                  <span key={idx} className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">
+                    {proc}
+                  </span>
+                ))}
+                {item.procesos.length > 2 && (
+                  <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">
+                    +{item.procesos.length - 2} más
+                  </span>
+                )}
+              </div>
+              
+              <div className="mt-4 flex items-center text-[#00A4E4] text-sm font-medium group">
+                Ver diagnóstico <ChevronRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
+              </div>
+            </div>
+          );
+        };
+
+        const DetailPanel = ({ item, onClose }) => {
+          if (!item) return null;
+          const isCritical = item.estado === "CRÍTICO";
+
+          return (
+            <div className="fixed inset-0 z-50 flex justify-end">
+              <div className="absolute inset-0 bg-black/20 backdrop-blur-sm transition-opacity" onClick={onClose} />
+              
+              <div className="relative w-full max-w-md bg-white h-full shadow-2xl p-0 overflow-y-auto slide-in-from-right">
+                <div className={`p-6 ${isCritical ? 'bg-red-50' : 'bg-yellow-50'}`}>
+                  <div className="flex justify-between items-start mb-4">
+                    <span className={`text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide ${isCritical ? 'bg-red-200 text-red-800' : 'bg-yellow-200 text-yellow-800'}`}>
+                      {item.estado}
+                    </span>
+                    <button onClick={onClose} className="p-1 hover:bg-black/5 rounded-full transition-colors">
+                      <X className="w-6 h-6 text-gray-500" />
+                    </button>
+                  </div>
+                  <h2 className="text-2xl font-bold text-gray-900 mb-2">{item.area}</h2>
+                  <p className="text-gray-600 text-sm">Análisis detallado de capacidades</p>
+                </div>
+
+                <div className="p-6 space-y-8">
+                  
+                  <div>
+                    <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                      <LayoutGrid className="w-4 h-4" /> Procesos Relevados
+                    </h3>
+                    <div className="flex flex-wrap gap-2">
+                      {item.procesos.map((proc, idx) => (
+                        <div key={idx} className="bg-gray-100 text-gray-700 px-3 py-2 rounded-lg text-sm border border-gray-200">
+                          {proc}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 flex items-center gap-2">
+                      <Activity className="w-4 h-4" /> Diagnóstico Rápido
+                    </h3>
+                    <div className="space-y-4">
+                      {item.diagnostico.map((diag, idx) => (
+                        <div key={idx} className="bg-white border border-gray-100 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden">
+                          <div className={`absolute top-0 left-0 w-1 h-full ${isCritical ? 'bg-red-500' : 'bg-yellow-500'}`} />
+                          {diag.titulo && (
+                            <h4 className="font-bold text-gray-900 mb-1">{diag.titulo}</h4>
+                          )}
+                          <p className="text-gray-600 text-sm leading-relaxed">
+                            {diag.desc}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="pt-6 border-t border-gray-100">
+                    <div className="bg-blue-50 p-4 rounded-lg flex gap-3 items-start">
+                      <Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                      <p className="text-sm text-blue-800">
+                        Este hallazgo requiere intervención inmediata en la <strong>Fase 1</strong> del plan de transformación.
+                      </p>
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+            </div>
+          );
+        };
+
+        const StatCard = ({ title, value, colorClass, icon: Icon }) => (
+          <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-400 font-medium mb-1">{title}</p>
+              <p className={`text-2xl font-bold ${colorClass}`}>{value}</p>
+            </div>
+            <div className={`p-3 rounded-full ${colorClass.replace('text-', 'bg-').replace('700', '100').replace('600', '100')} opacity-20`}>
+               <Icon className={`w-6 h-6 ${colorClass}`} />
+            </div>
+          </div>
+        );
+
+        function App() {
+          const [showIntro, setShowIntro] = useState(true);
+          const [selectedItem, setSelectedItem] = useState(null);
+          const [filter, setFilter] = useState('ALL');
+
+          const filteredData = data.filter(item => {
+            if (filter === 'ALL') return true;
+            return item.estado === filter;
+          });
+
+          const stats = {
+            total: data.length,
+            critical: data.filter(d => d.estado === 'CRÍTICO').length,
+            friction: data.filter(d => d.estado === 'FRICCIÓN').length
+          };
+
+          if (showIntro) {
+            return <IntroScreen onStart={() => setShowIntro(false)} />;
+          }
+
+          return (
+            <div className="min-h-screen bg-gray-50 font-sans text-gray-900 fade-in">
+              
+              <nav className="bg-[#002B5C] text-white p-4 shadow-lg sticky top-0 z-10">
+                <div className="max-w-6xl mx-auto flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                     <div className="bg-white rounded p-1 shadow-sm">
+                        <img 
+                          src={logoUrl} 
+                          alt="National Brokers" 
+                          className="h-8 w-auto object-contain" 
+                        />
+                     </div>
+                     <div className="h-8 w-px bg-blue-800 mx-2 hidden md:block"></div>
+                     <div className="bg-white rounded p-1 shadow-sm hidden md:block">
+                        <img 
+                          src={bombieriLogoUrl} 
+                          alt="Bombieri" 
+                          className="h-6 w-auto object-contain" 
+                        />
+                     </div>
+                    <div className="font-light text-gray-300 text-lg hidden md:block tracking-tight">
+                       | Diagnóstico
+                    </div>
+                  </div>
+                  <div className="text-xs uppercase tracking-widest text-gray-300">
+                    Informe Fase 2
+                  </div>
+                </div>
+              </nav>
+
+              <main className="max-w-6xl mx-auto p-4 md:p-8">
+                
+                <div className="mb-8 flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
+                  <div>
+                    <h1 className="text-3xl font-bold text-gray-900 mb-2">Mapa de Calor de Capacidades</h1>
+                    <p className="text-gray-600 max-w-2xl">
+                      Diagnóstico visual de la salud operativa. Seleccione un área para ver el detalle.
+                    </p>
+                  </div>
+                  <button 
+                    onClick={() => setShowIntro(true)}
+                    className="text-sm text-[#00A4E4] font-medium hover:underline"
+                  >
+                    ← Volver al resumen
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                  <StatCard title="Áreas Relevadas" value={stats.total} colorClass="text-gray-700" icon={BarChart3} />
+                  <StatCard title="Estado Crítico" value={stats.critical} colorClass="text-red-600" icon={AlertCircle} />
+                  <StatCard title="En Fricción" value={stats.friction} colorClass="text-yellow-600" icon={AlertTriangle} />
+                </div>
+
+                <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+                  <div className="flex gap-2 p-1 bg-white rounded-lg shadow-sm border border-gray-200 w-full md:w-auto">
+                    {['ALL', 'CRÍTICO', 'FRICCIÓN'].map((f) => (
+                      <button
+                        key={f}
+                        onClick={() => setFilter(f)}
+                        className={`
+                          px-4 py-2 text-sm font-medium rounded-md transition-all flex-1 md:flex-none
+                          ${filter === f 
+                            ? 'bg-[#002B5C] text-white shadow-sm' 
+                            : 'text-gray-500 hover:bg-gray-50'}
+                        `}
+                      >
+                        {f === 'ALL' ? 'Ver Todo' : f}
+                      </button>
+                    ))}
+                  </div>
+                  
+                  <div className="text-sm text-gray-400 italic">
+                    Mostrando {filteredData.length} capacidades
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {filteredData.map((item) => (
+                    <HeatmapCard 
+                      key={item.id} 
+                      item={item} 
+                      onClick={setSelectedItem}
+                      isActive={selectedItem?.id === item.id}
+                    />
+                  ))}
+                </div>
+
+                {filteredData.length === 0 && (
+                  <div className="text-center py-20 bg-white rounded-xl border border-dashed border-gray-300">
+                    <Search className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                    <p className="text-gray-500">No se encontraron áreas con este filtro.</p>
+                  </div>
+                )}
+
+              </main>
+
+              {selectedItem && (
+                <DetailPanel item={selectedItem} onClose={() => setSelectedItem(null)} />
+              )}
+
+            </div>
+          );
+        }
+
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+</body>
+</html>
